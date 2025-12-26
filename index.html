@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Sistema profissional de precificação para confeitaria. Calcule fichas técnicas e lucros.">
+    <meta name="theme-color" content="#fdf2f8"> <!-- Cor do tema (Rosa claro) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Confeitaria Pro | Área do Aluno</title>
+    
+    <!-- React Core -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Estilos (Tailwind) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Ícone da Aba -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧁</text></svg>">
+
+    <style>
+        /* Estilos Globais */
+        body { -webkit-tap-highlight-color: transparent; }
+        
+        /* Barra de rolagem personalizada */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #fbcfe8; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #f472b6; }
+        
+        /* Animações */
+        @keyframes fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+
+        /* Estilos de Impressão */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            .card-recipe { break-inside: avoid; border: 1px solid #ccc; box-shadow: none; }
+        }
+    </style>
+</head>
+<body class="bg-pink-50 text-slate-800 font-sans antialiased selection:bg-pink-200">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ÍCONES ---
+        const Icons = {
+            ChefHat: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>,
+            Calculator: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>,
+            Database: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>,
+            Plus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Trash2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+            DollarSign: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+            TrendingUp: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+            Package: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+            X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Save: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>,
+            Scale: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>,
+            Printer: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+            LogOut: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+            Edit: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+            Refresh: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        };
+
+        const Icon = ({ name, size = 20, className }) => {
+            const IconComponent = Icons[name];
+            return IconComponent ? <IconComponent width={size} height={size} className={className} /> : null;
+        };
+
+        function App() {
+            // --- 1. SISTEMA DE LOGIN ---
+            const USER_MESTRE = "aluno";
+            const PASS_MESTRE = "sucesso";
+
+            const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('confeitaria-auth-user'));
+            const [loginInput, setLoginInput] = useState({ user: '', pass: '' });
+            const [loginError, setLoginError] = useState('');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (loginInput.user.toLowerCase() === USER_MESTRE && loginInput.pass === PASS_MESTRE) {
+                    setCurrentUser(loginInput.user);
+                    localStorage.setItem('confeitaria-auth-user', loginInput.user);
+                    setLoginError('');
+                } else {
+                    setLoginError('Usuário ou senha incorretos.');
+                }
+            };
+
+            const handleLogout = () => {
+                if(confirm("Deseja sair do sistema?")) {
+                    setCurrentUser(null);
+                    localStorage.removeItem('confeitaria-auth-user');
+                    setLoginInput({ user: '', pass: '' });
+                }
+            };
+
+            // --- 2. SISTEMA DA CALCULADORA ---
+            const [activeTab, setActiveTab] = useState('recipes'); 
+            const [products, setProducts] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('pricing-products-v3');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) { return []; }
+            });
+            const [savedIngredients, setSavedIngredients] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('pricing-ingredients-db-v3');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) { return []; }
+            });
+
+            // ESTADOS DE EDIÇÃO
+            const [editingDbId, setEditingDbId] = useState(null);
+            const [editingProductId, setEditingProductId] = useState(null);
+
+            const [form, setForm] = useState({ name: '', yieldUnits: 1, tax: 4, expenses: 15, profit: 30 });
+            const [currentIngredients, setCurrentIngredients] = useState([]);
+            const [ingForm, setIngForm] = useState({ mode: 'simple', name: '', cost: '', packPrice: '', packSize: '', usage: '', selectedDbId: '' });
+            const [dbInput, setDbInput] = useState({ name: '', price: '', size: '' });
+
+            useEffect(() => { localStorage.setItem('pricing-products-v3', JSON.stringify(products)); }, [products]);
+            useEffect(() => { localStorage.setItem('pricing-ingredients-db-v3', JSON.stringify(savedIngredients)); }, [savedIngredients]);
+
+            const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+            const calculateMetrics = (costPerUnit, tax, expenses, profitMargin) => {
+                const costNum = parseFloat(costPerUnit) || 0;
+                const totalDeductions = (parseFloat(tax)||0) + (parseFloat(expenses)||0) + (parseFloat(profitMargin)||0);
+                if (totalDeductions >= 100) return { error: true, suggestedPrice: 0, cmvPercent: 0, netProfitValue: 0 };
+                const divisor = (100 - totalDeductions) / 100;
+                const suggestedPrice = costNum / divisor;
+                const cmvPercent = suggestedPrice > 0 ? (costNum / suggestedPrice) * 100 : 0;
+                const netProfitValue = suggestedPrice * ((parseFloat(profitMargin)||0) / 100);
+                return { suggestedPrice, cmvPercent, netProfitValue, totalDeductions, error: false };
+            };
+
+            // --- AÇÕES DO ESTOQUE (INSUMOS) ---
+            const addDbIngredient = (e) => {
+                e.preventDefault();
+                if (!dbInput.name || !dbInput.price) return;
+                
+                if (editingDbId) {
+                    // MODO ATUALIZAÇÃO
+                    setSavedIngredients(savedIngredients.map(item => 
+                        item.id === editingDbId 
+                        ? { ...item, name: dbInput.name, price: parseFloat(dbInput.price), size: parseFloat(dbInput.size) || 0 }
+                        : item
+                    ));
+                    setEditingDbId(null);
+                    alert("Insumo atualizado com sucesso!");
+                } else {
+                    // MODO CRIAÇÃO
+                    setSavedIngredients([...savedIngredients, { id: Date.now(), name: dbInput.name, price: parseFloat(dbInput.price), size: parseFloat(dbInput.size) || 0 }]);
+                }
+                setDbInput({ name: '', price: '', size: '' });
+            };
+
+            const startEditDbIngredient = (item) => {
+                setDbInput({ name: item.name, price: item.price, size: item.size || '' });
+                setEditingDbId(item.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const cancelEditDbIngredient = () => {
+                setDbInput({ name: '', price: '', size: '' });
+                setEditingDbId(null);
+            };
+
+            const removeDbIngredient = (id) => {
+                if(confirm("Deseja remover este insumo?")) {
+                    setSavedIngredients(savedIngredients.filter(i => i.id !== id));
+                    if (editingDbId === id) cancelEditDbIngredient();
+                }
+            };
+
+            // --- AÇÕES DA CALCULADORA (RECEITAS) ---
+            const handleInputChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+            const handleIngFormChange = (e) => {
+                const { name, value } = e.target;
+                const newForm = { ...ingForm, [name]: value };
+                if (ingForm.mode === 'calc' || name === 'packPrice' || name === 'packSize' || name === 'usage') {
+                    const pPrice = parseFloat(name === 'packPrice' ? value : ingForm.packPrice) || 0;
+                    const pSize = parseFloat(name === 'packSize' ? value : ingForm.packSize) || 1;
+                    const pUsage = parseFloat(name === 'usage' ? value : ingForm.usage) || 0;
+                    if (pSize > 0) newForm.cost = (pPrice / pSize) * pUsage;
+                }
+                setIngForm(newForm);
+            };
+            const selectDbIngredient = (e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) { setIngForm({ ...ingForm, selectedDbId: '', name: '', cost: '', mode: 'simple' }); return; }
+                const item = savedIngredients.find(i => i.id.toString() === selectedId);
+                if (item) { setIngForm({ ...ingForm, selectedDbId: selectedId, name: item.name, mode: item.size > 0 ? 'calc' : 'simple', packPrice: item.price, packSize: item.size || '', usage: '', cost: item.size > 0 ? '' : item.price }); }
+            };
+            const addIngredientToRecipe = (e) => {
+                e.preventDefault();
+                if (!ingForm.name || !ingForm.cost) return;
+                setCurrentIngredients([...currentIngredients, { id: Date.now(), name: ingForm.name, cost: parseFloat(ingForm.cost), detail: ingForm.mode === 'calc' ? `${ingForm.usage}g de ${ingForm.packSize}g` : 'Unidade' }]);
+                setIngForm({ mode: 'simple', name: '', cost: '', packPrice: '', packSize: '', usage: '', selectedDbId: '' });
+            };
+
+            const saveProduct = () => {
+                if (!form.name || currentIngredients.length === 0) return alert("Preencha o nome e adicione ingredientes.");
+                const totalRecipeCost = currentIngredients.reduce((acc, curr) => acc + curr.cost, 0);
+                const unitCost = form.yieldUnits > 0 ? totalRecipeCost / parseFloat(form.yieldUnits) : 0;
+                
+                const productData = {
+                    name: form.name,
+                    yieldUnits: parseFloat(form.yieldUnits),
+                    tax: parseFloat(form.tax),
+                    expenses: parseFloat(form.expenses),
+                    profit: parseFloat(form.profit),
+                    ingredients: currentIngredients,
+                    unitCost: unitCost
+                };
+
+                if (editingProductId) {
+                    // MODO ATUALIZAÇÃO
+                    setProducts(products.map(p => p.id === editingProductId ? { ...productData, id: editingProductId } : p));
+                    setEditingProductId(null);
+                    alert("Receita atualizada com sucesso!");
+                } else {
+                    // MODO CRIAÇÃO
+                    setProducts([{ id: Date.now(), ...productData }, ...products]);
+                    alert("Receita salva!");
+                }
+                setForm({ ...form, name: '', yieldUnits: 1 }); 
+                setCurrentIngredients([]);
+            };
+
+            const startEditProduct = (product) => {
+                setForm({
+                    name: product.name,
+                    yieldUnits: product.yieldUnits,
+                    tax: product.tax,
+                    expenses: product.expenses,
+                    profit: product.profit
+                });
+                setCurrentIngredients(product.ingredients);
+                setEditingProductId(product.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const cancelEditProduct = () => {
+                setEditingProductId(null);
+                setForm({ ...form, name: '', yieldUnits: 1 });
+                setCurrentIngredients([]);
+            };
+
+            const removeProduct = (id) => { 
+                if(confirm("Excluir esta receita?")) {
+                    setProducts(products.filter(p => p.id !== id)); 
+                    if (editingProductId === id) cancelEditProduct();
+                }
+            };
+
+            const totalRevenue = products.reduce((acc, curr) => acc + (calculateMetrics(curr.unitCost, curr.tax, curr.expenses, curr.profit).suggestedPrice * curr.yieldUnits), 0);
+            const totalProfit = products.reduce((acc, curr) => acc + (calculateMetrics(curr.unitCost, curr.tax, curr.expenses, curr.profit).netProfitValue * curr.yieldUnits), 0);
+
+            // --- 3. RENDERIZAÇÃO ---
+            if (!currentUser) {
+                return (
+                    <div className="min-h-screen bg-pink-50 flex flex-col items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-2xl shadow-xl border border-pink-100 w-full max-w-sm animate-fade-in">
+                            <div className="text-center mb-6">
+                                <div className="inline-flex bg-pink-100 p-4 rounded-full text-pink-600 mb-4 shadow-sm"><Icon name="ChefHat" size={40} /></div>
+                                <h1 className="text-2xl font-bold text-slate-800">Área do Aluno</h1>
+                                <p className="text-slate-500 text-sm mt-1">Confeitaria Pro</p>
+                            </div>
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Usuário</label><input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-pink-500" placeholder="Ex: aluno" value={loginInput.user} onChange={e => setLoginInput({...loginInput, user: e.target.value})} /></div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Senha</label><input type="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-pink-500" placeholder="••••••" value={loginInput.pass} onChange={e => setLoginInput({...loginInput, pass: e.target.value})} /></div>
+                                {loginError && <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg border border-red-100 text-center font-medium animate-fade-in">{loginError}</div>}
+                                <button type="submit" className="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all mt-2 flex items-center justify-center gap-2">Acessar Ferramenta <Icon name="TrendingUp" size={18} /></button>
+                            </form>
+                            <div className="mt-8 text-center pt-6 border-t border-slate-100"><p className="text-xs text-slate-400">Problemas com acesso? Contate o suporte do curso.</p></div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 pb-20">
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-pink-700 flex items-center gap-2"><span className="bg-pink-100 p-2 rounded-lg"><Icon name="ChefHat" size={32} /></span> Confeitaria Pro</h1>
+                                    <p className="text-xs text-slate-400 mt-1 ml-1 flex items-center gap-1">Logado como: <span className="font-bold text-pink-600">{currentUser}</span></p>
+                                </div>
+                                <button onClick={handleLogout} className="md:hidden text-slate-400 bg-white p-2 rounded-lg border border-slate-200 hover:text-red-500"><Icon name="LogOut" size={20} /></button>
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="flex bg-white p-1 rounded-xl border border-pink-200 shadow-sm">
+                                    <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'recipes' ? 'bg-pink-100 text-pink-700' : 'text-slate-500 hover:text-slate-700'}`}><Icon name="Calculator" size={18} /> Calculadora</button>
+                                    <button onClick={() => setActiveTab('ingredients')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'ingredients' ? 'bg-pink-100 text-pink-700' : 'text-slate-500 hover:text-slate-700'}`}><Icon name="Database" size={18} /> Insumos</button>
+                                </div>
+                                <button onClick={handleLogout} className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors font-medium text-sm"><Icon name="LogOut" size={16} /> Sair</button>
+                            </div>
+                        </header>
+
+                        {/* --- ABA INSUMOS --- */}
+                        {activeTab === 'ingredients' && (
+                            <div className="space-y-6 animate-fade-in no-print">
+                                <div className={`bg-white rounded-2xl shadow-sm border ${editingDbId ? 'border-orange-300 ring-2 ring-orange-100' : 'border-pink-200'} p-6 transition-all`}>
+                                    <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                        <Icon name={editingDbId ? "Edit" : "Database"} className={editingDbId ? "text-orange-500" : "text-pink-600"} /> 
+                                        {editingDbId ? "Editando Insumo" : "Cadastro de Estoque"}
+                                    </h2>
+                                    <form onSubmit={addDbIngredient} className="flex flex-col lg:flex-row gap-3 items-end mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <div className="flex-1 w-full"><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nome</label><input required type="text" placeholder="Ex: Leite Condensado" value={dbInput.name} onChange={(e) => setDbInput({...dbInput, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-pink-400" /></div>
+                                        <div className="w-full lg:w-32"><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Preço (R$)</label><input required type="number" step="0.01" placeholder="0,00" value={dbInput.price} onChange={(e) => setDbInput({...dbInput, price: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-pink-400" /></div>
+                                        <div className="w-full lg:w-32"><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Peso (g/ml)</label><input type="number" step="1" placeholder="Ex: 395" value={dbInput.size} onChange={(e) => setDbInput({...dbInput, size: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-pink-400" /></div>
+                                        
+                                        <div className="flex gap-2 w-full lg:w-auto">
+                                            {editingDbId && (
+                                                <button type="button" onClick={cancelEditDbIngredient} className="flex-1 lg:flex-none bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">Cancelar</button>
+                                            )}
+                                            <button type="submit" className={`flex-1 lg:flex-none font-bold py-2 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-white ${editingDbId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-pink-600 hover:bg-pink-700'}`}>
+                                                <Icon name={editingDbId ? "Refresh" : "Plus"} size={18} /> {editingDbId ? "Atualizar" : "Salvar"}
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {savedIngredients.length === 0 ? <p className="col-span-3 text-center text-slate-400 py-4">Nenhum insumo cadastrado.</p> : savedIngredients.map(item => (
+                                            <div key={item.id} className={`flex justify-between items-center p-3 bg-white border rounded-lg shadow-sm transition-all ${editingDbId === item.id ? 'border-orange-400 bg-orange-50' : 'border-slate-100 hover:border-pink-200'}`}>
+                                                <div><span className="font-bold text-slate-700 block text-sm">{item.name}</span><span className="text-xs text-slate-400">{item.size > 0 ? `${item.size}g = ${formatCurrency(item.price)}` : `Unid: ${formatCurrency(item.price)}`}</span></div>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => startEditDbIngredient(item)} className="text-slate-300 hover:text-orange-500 p-2" title="Editar"><Icon name="Edit" size={16} /></button>
+                                                    <button onClick={() => removeDbIngredient(item.id)} className="text-slate-300 hover:text-red-500 p-2" title="Excluir"><Icon name="Trash2" size={16} /></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- ABA RECEITAS --- */}
+                        {activeTab === 'recipes' && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 no-print">
+                                    <div className="bg-white p-4 rounded-xl border border-pink-100"><p className="text-xs text-slate-400 font-bold uppercase">Receitas</p><p className="text-xl font-bold text-slate-800">{products.length}</p></div>
+                                    <div className="bg-white p-4 rounded-xl border border-pink-100"><p className="text-xs text-slate-400 font-bold uppercase">Faturamento</p><p className="text-xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p></div>
+                                    <div className="col-span-2 md:col-span-1 bg-white p-4 rounded-xl border border-pink-100"><p className="text-xs text-slate-400 font-bold uppercase">Lucro Líquido</p><p className="text-xl font-bold text-emerald-600">{formatCurrency(totalProfit)}</p></div>
+                                </div>
+
+                                <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden no-print transition-all ${editingProductId ? 'border-orange-300 ring-2 ring-orange-100' : 'border-pink-200'}`}>
+                                    <div className={`p-4 border-b flex justify-between items-center ${editingProductId ? 'bg-orange-50 border-orange-200' : 'bg-pink-50 border-pink-100'}`}>
+                                        <h2 className={`text-lg font-bold flex items-center gap-2 ${editingProductId ? 'text-orange-700' : 'text-pink-800'}`}>
+                                            <Icon name={editingProductId ? "Edit" : "Plus"} size={20} /> {editingProductId ? "Editando Ficha Técnica" : "Nova Ficha Técnica"}
+                                        </h2>
+                                        {editingProductId && <button onClick={cancelEditProduct} className="text-xs bg-white px-3 py-1 rounded border border-orange-200 text-orange-600 font-bold hover:bg-orange-100">Cancelar Edição</button>}
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        <div className="lg:col-span-2 space-y-4">
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="col-span-2"><label className="text-xs font-bold text-slate-500 uppercase">Nome</label><input type="text" name="name" placeholder="Ex: Bolo Cenoura" value={form.name} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:border-pink-400 outline-none" /></div>
+                                                <div><label className="text-xs font-bold text-slate-500 uppercase">Rendimento</label><input type="number" min="1" name="yieldUnits" value={form.yieldUnits} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border rounded-lg text-center focus:border-pink-400 outline-none" /></div>
+                                            </div>
+                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    <select onChange={selectDbIngredient} value={ingForm.selectedDbId} className="flex-1 text-sm border-slate-300 rounded-md p-2"><option value="">Selecionar do Estoque...</option>{savedIngredients.map(ing => (<option key={ing.id} value={ing.id}>{ing.name}</option>))}</select>
+                                                </div>
+                                                <div className="bg-white p-3 rounded-lg border border-slate-200 mb-3">
+                                                    <div className="flex justify-between mb-2"><input type="text" name="name" placeholder="Ingrediente" value={ingForm.name} onChange={handleIngFormChange} disabled={!!ingForm.selectedDbId} className="text-sm font-medium w-full outline-none" />{!ingForm.selectedDbId && <button onClick={() => setIngForm(p => ({...p, mode: p.mode==='simple'?'calc':'simple', cost:''}))} className="text-xs bg-slate-100 px-2 rounded text-slate-500"><Icon name="Scale" size={12}/> Calc</button>}</div>
+                                                    <div className="flex gap-2 items-end">
+                                                        {ingForm.mode === 'calc' ? (
+                                                            <div className="flex-1 grid grid-cols-3 gap-2 bg-blue-50 p-2 rounded border border-blue-100">
+                                                                <div><label className="text-[9px] uppercase font-bold text-slate-400">R$ Pago</label><input type="number" name="packPrice" value={ingForm.packPrice} onChange={handleIngFormChange} disabled={!!ingForm.selectedDbId} className="w-full text-xs p-1 rounded" /></div>
+                                                                <div><label className="text-[9px] uppercase font-bold text-slate-400">Total(g)</label><input type="number" name="packSize" value={ingForm.packSize} onChange={handleIngFormChange} disabled={!!ingForm.selectedDbId} className="w-full text-xs p-1 rounded" /></div>
+                                                                <div><label className="text-[9px] uppercase font-bold text-blue-600">Uso(g)</label><input type="number" name="usage" value={ingForm.usage} onChange={handleIngFormChange} className="w-full text-xs p-1 rounded border-blue-300 font-bold text-blue-800" autoFocus /></div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex-1"><label className="text-[9px] uppercase font-bold text-slate-400">Custo</label><input type="number" step="0.01" name="cost" value={ingForm.cost} onChange={handleIngFormChange} disabled={ingForm.selectedDbId && ingForm.cost!==''} className="w-full text-sm font-bold border rounded p-2" placeholder="R$ 0,00" /></div>
+                                                        )}
+                                                        <button onClick={addIngredientToRecipe} className="bg-slate-800 text-white h-10 px-4 rounded font-bold text-sm">ADD</button>
+                                                    </div>
+                                                </div>
+                                                <div className="max-h-40 overflow-y-auto space-y-1">
+                                                    {currentIngredients.map(ing => (<div key={ing.id} className="flex justify-between bg-white p-2 rounded border text-sm"><span className="text-slate-600">{ing.name} <small className="text-slate-400">({ing.detail})</small></span><div className="flex gap-2"><span className="font-bold">{formatCurrency(ing.cost)}</span><button onClick={() => setCurrentIngredients(currentIngredients.filter(i=>i.id!==ing.id))} className="text-red-400">x</button></div></div>))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-pink-50 p-5 rounded-xl border border-pink-100 flex flex-col justify-between">
+                                            <div className="space-y-3">
+                                                <div className="bg-white p-3 rounded border border-pink-200 flex justify-between"><span className="text-xs font-bold text-slate-400 uppercase">Custo Unit.</span><span className="font-bold text-slate-700">{formatCurrency(form.yieldUnits > 0 ? currentIngredients.reduce((a, b) => a + b.cost, 0) / parseFloat(form.yieldUnits) : 0)}</span></div>
+                                                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                                    <div><label>Imposto%</label><input type="number" name="tax" value={form.tax} onChange={handleInputChange} className="w-full p-1 border rounded text-center" /></div>
+                                                    <div><label>Gastos%</label><input type="number" name="expenses" value={form.expenses} onChange={handleInputChange} className="w-full p-1 border rounded text-center" /></div>
+                                                    <div><label>Lucro%</label><input type="number" name="profit" value={form.profit} onChange={handleInputChange} className="w-full p-1 border rounded text-center font-bold text-emerald-600" /></div>
+                                                </div>
+                                                <div className="pt-4 border-t border-pink-200">
+                                                    <p className="text-xs font-bold text-slate-500 uppercase">Preço Venda</p>
+                                                    <p className="text-3xl font-black text-pink-600">{formatCurrency(calculateMetrics(form.yieldUnits > 0 ? currentIngredients.reduce((a, b) => a + b.cost, 0) / parseFloat(form.yieldUnits) : 0, form.tax, form.expenses, form.profit).suggestedPrice)}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={saveProduct} className={`w-full mt-4 text-white font-bold py-3 rounded-xl shadow flex justify-center gap-2 transition-colors ${editingProductId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-pink-600 hover:bg-pink-700'}`}>
+                                                <Icon name={editingProductId ? "Refresh" : "Save"} size={20}/> {editingProductId ? "Atualizar Receita" : "Salvar Receita"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {products.map((product) => {
+                                        const metrics = calculateMetrics(product.unitCost, product.tax, product.expenses, product.profit);
+                                        return (
+                                            <div key={product.id} className={`card-recipe bg-white rounded-xl shadow-sm border p-5 relative group transition-all ${editingProductId === product.id ? 'border-orange-400 ring-2 ring-orange-100' : 'border-slate-100'}`}>
+                                                <div className="no-print absolute top-4 right-4 flex gap-2">
+                                                    <button onClick={() => window.print()} className="text-slate-300 hover:text-blue-500" title="Imprimir"><Icon name="Printer" size={16} /></button>
+                                                    <button onClick={() => startEditProduct(product)} className="text-slate-300 hover:text-orange-500" title="Editar"><Icon name="Edit" size={16} /></button>
+                                                    <button onClick={() => removeProduct(product.id)} className="text-slate-300 hover:text-red-500" title="Excluir"><Icon name="Trash2" size={16} /></button>
+                                                </div>
+                                                <h3 className="font-bold text-slate-800 text-lg mb-1">{product.name}</h3>
+                                                <p className="text-sm text-slate-500 mb-3 flex items-center gap-2">Rendimento: {product.yieldUnits} un.</p>
+                                                <div className="bg-pink-50 rounded-lg p-3 mb-2 border border-pink-100">
+                                                    <div className="flex justify-between items-end">
+                                                        <div><p className="text-[10px] text-pink-800 uppercase font-bold">Venda Sugerida</p><p className="text-2xl font-bold text-pink-700 leading-none">{formatCurrency(metrics.suggestedPrice)}</p></div>
+                                                        <div className="text-right"><p className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded">Lucro: {formatCurrency(metrics.netProfitValue)}</p></div>
+                                                    </div>
+                                                </div>
+                                                <div className="hidden print-only mt-4 pt-4 border-t border-slate-200">
+                                                    <p className="font-bold text-xs uppercase mb-2">Ingredientes:</p>
+                                                    <ul className="text-xs space-y-1">{product.ingredients.map((ing, idx) => (<li key={idx} className="flex justify-between border-b border-dotted border-slate-300 pb-1"><span>{ing.name} ({ing.detail})</span><span>{formatCurrency(ing.cost)}</span></li>))}</ul>
+                                                    <p className="mt-2 text-right font-bold text-sm">Custo Total Receita: {formatCurrency(product.ingredients.reduce((a,b)=>a+b.cost,0))}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
